@@ -54,7 +54,7 @@ class LeadPokemon:
         self.hp = 100
         self.type1 = 'None'
         self.type2 = 'None'
-        self.status = 'FALSE'
+        self.status = 'None'
         self.atkBoosts = 0
         self.defBoosts = 0
         self.spaBoosts = 0
