@@ -128,9 +128,9 @@ def checkBattleCompletion(driver):
 
 
 # Returns true if I won the match, False otherwise
-def find_winner(driver):
+def find_winner(driver, username):
     battle_history = driver.find_elements(By.CLASS_NAME, 'battle-history')
-    if 'Trace_AI' in battle_history[-1].text:
+    if username in battle_history[-1].text:
         return True
     else:
         return False

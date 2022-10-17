@@ -14,14 +14,17 @@ import traceback
 from tensorflow import keras
 from pickle import load
 from statistics import save_results
+from dotenv import load_dotenv
 
 
 TURN_DEPTH = 1
-MODEL_NAME = 'model4'
-MODE = 'LADDER'     # Set to 'LADDER' or 'CHALLENGE'
+MODEL_NAME = 'model2'
+MODE = 'CHALLENGE'     # Set to 'LADDER' or 'CHALLENGE'
 
 
 async def main():
+    load_dotenv('webInterface/.env')
+    USER_NAME = os.getenv("LOGIN_USERNAME")
     with open('log.txt', 'w'):
         pass
     logging.basicConfig(filename='log.txt', encoding='utf-8', level=logging.INFO)
@@ -70,7 +73,7 @@ async def main():
                     break
                 if battleControls.check_for_multi_turn_moves(driver):
                     continue
-                currentBattleState = await infoScraping.getBattleState(driver, currentBattleState, current_elo)
+                currentBattleState = await infoScraping.getBattleState(driver, currentBattleState, current_elo, USER_NAME)
                 decision_list = decide_option(OutcomeNode(currentBattleState, 1, 'Root'), TURN_DEPTH, prediction_function, scalar)
                 # Select best option from decision list. If False is returned, try next best option.
                 option_selected = False
@@ -100,7 +103,7 @@ async def main():
         opponent_name = currentBattleState.opponentName
         elo = currentBattleState.elo
         try:
-            result = battleControls.find_winner(driver)
+            result = battleControls.find_winner(driver, USER_NAME)
             webFunctions.exit_battle(driver)
         except:
             result = False

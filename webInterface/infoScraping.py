@@ -760,7 +760,7 @@ def printToolTips(driver):
 
 
 # Returns battleState object for AI calculations from showdown website.
-async def getBattleState(driver, previousBattleState, elo):
+async def getBattleState(driver, previousBattleState, elo, username):
     if previousBattleState:
         battleState = previousBattleState
         # Increment sleep turns if necessary
@@ -1225,10 +1225,10 @@ async def getBattleState(driver, previousBattleState, elo):
     elementGrab = toolTip.find_elements(By.CLASS_NAME, 'section')
     for element in elementGrab:
         conditionText = element.text.split('\n')
-        if re.search('Trace_AI', element.text):
-            battleState.myField = getFieldConditions(battleState.myField, conditionText, battleState.opponentName)
+        if re.search(username, element.text):
+            battleState.myField = getFieldConditions(conditionText, battleState.opponentName, username)
         else:
-            battleState.opponentField = getFieldConditions(battleState.opponentField, conditionText, battleState.opponentName)
+            battleState.opponentField = getFieldConditions(conditionText, battleState.opponentName, username)
 
     # Fill in information for each team from pokeapi, if not filled in already
     logging.info('Performing api lookups for my team')
@@ -1337,7 +1337,7 @@ async def get_max_moves(session, pokemon):
 
 
 # Get entry hazards and active screens from the turn counter.
-def getFieldConditions(field, conditionText, opponentName):
+def getFieldConditions(conditionText, opponentName, username):
     field = {
             'reflect': {'isUp': False, 'minTurns': 0, 'maxTurns': 0},
             'lightScreen': {'isUp': False, 'minTurns': 0, 'maxTurns': 0},
@@ -1346,7 +1346,7 @@ def getFieldConditions(field, conditionText, opponentName):
             'entryHazards': []
         }
     for text in conditionText:
-        if re.search('Trace_AI', text) or re.search(opponentName, text):
+        if re.search(username, text) or re.search(opponentName, text):
             continue
         elif re.search('(no conditions)', text):
             break
