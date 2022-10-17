@@ -3,10 +3,10 @@ import logging
 import os
 import pickle
 import time
-import battleControls
-import webFunctions
-import infoScraping
-from calculations import OutcomeNode, decide_option
+import webInterface.battleControls as battleControls
+import webInterface.webFunctions as webFunctions
+import webInterface.infoScraping as infoScraping
+from simulation.calculations import OutcomeNode, decide_option
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium import webdriver
