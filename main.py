@@ -16,11 +16,43 @@ from dotenv import load_dotenv
 
 
 TURN_DEPTH = 1
-MODEL_NAME = 'model2'
-MODE = 'CHALLENGE'     # Set to 'LADDER' or 'CHALLENGE'
 
 
 async def main():
+    # Get model and mode settings
+    while True:
+        user_input = input('Please select which model you want to use:\n'
+                           '\t1: Multilayer Perceptron\n'
+                           '\t2: Deep Learning Network\n'
+                           '\t3: Logistical Regression\n'
+                           '\t4: Naive Bayes\n')
+        if user_input == '1':
+            MODEL_NAME = 'model1'
+            break
+        elif user_input == '2':
+            MODEL_NAME = 'model2'
+            break
+        elif user_input == '3':
+            MODEL_NAME = 'model3'
+            break
+        elif user_input == '4':
+            MODEL_NAME = 'model4'
+            break
+        else:
+            print("Invalid Input. Please enter a number 1-4.")
+    while True:
+        user_input = input('Please select how the AI will play:\n'
+                           '\t1: Play on the ladder\n'
+                           '\t2: Wait for challenge request\n')
+        if user_input == '1':
+            MODE = 'LADDER'
+            break
+        elif user_input == '2':
+            MODE = 'CHALLENGE'
+            break
+        else:
+            print("Invalid Input. Please enter a number 1-4.")
+
     load_dotenv('webInterface/.env')
     USER_NAME = os.getenv("LOGIN_USERNAME")
     with open('log.txt', 'w'):
