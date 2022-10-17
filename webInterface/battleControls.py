@@ -3,7 +3,6 @@ import random
 import time
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 from selenium.webdriver.common.by import By
-#from webInterface import adjust_name
 import webInterface
 
 

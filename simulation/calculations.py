@@ -2,7 +2,6 @@ import logging
 from copy import deepcopy
 import numpy as np
 import pandas as pd
-#from webInterface import get_pokemon_index, adjust_name,  BattleState, calculate_effective_stats
 import webInterface
 
 
