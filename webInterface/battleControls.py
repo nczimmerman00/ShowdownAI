@@ -3,7 +3,8 @@ import random
 import time
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 from selenium.webdriver.common.by import By
-from infoScraping import adjust_name
+#from webInterface import adjust_name
+import webInterface
 
 
 # Slot number must be 0-5 inclusive
@@ -188,7 +189,7 @@ def select_option(driver, outcome):
             buttons = elementGrab.find_elements(By.TAG_NAME, 'button')
         for button in buttons:
             button_text = button.text[:button.text.index('\n')]
-            if adjust_name(button_text) in option.name:
+            if webInterface.adjust_name(button_text) in option.name:
                 button.click()
                 time.sleep(1)
                 result = check_if_option_was_selected(driver, turn)

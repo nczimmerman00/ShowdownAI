@@ -5,13 +5,12 @@ import re
 import time
 import asyncio
 from copy import deepcopy
-
 import aiopoke
-import requests
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
-from webFunctions import awaitElement
+#from webFunctions import awaitElement
+#from webInterface import awaitElement
 
 
 class Pokemon:
@@ -694,23 +693,6 @@ accuracyStatChanges = {
 }
 
 
-# Returns json file with possible random sets.
-def updatePossibleSets():
-    logging.info('Getting possible random battle sets json file.')
-    try:
-        url = requests.get('https://pkmn.github.io/randbats/data/gen8randombattle.json')
-        sets = url.text
-    except:
-        logging.warning('Error grabbing online set data. Using old data.')
-        with open('teams/old_sets.json', 'r') as setsFile:
-            sets = setsFile.read()
-            return sets
-    localFile = open('teams/old_sets.json', 'w')
-    localFile.write(sets)
-    localFile.close()
-    return sets
-
-
 # Used to print off tooltip element for debugging purposes.
 def printToolTips(driver):
     # Prints My Tool Tips
@@ -761,6 +743,8 @@ def printToolTips(driver):
 
 # Returns battleState object for AI calculations from showdown website.
 async def getBattleState(driver, previousBattleState, elo, username):
+    from webInterface import awaitElement
+
     if previousBattleState:
         battleState = previousBattleState
         # Increment sleep turns if necessary

@@ -1,16 +1,15 @@
 import logging
 from copy import deepcopy
-
 import numpy as np
 import pandas as pd
-
-from infoScraping import get_pokemon_index, adjust_name,  BattleState, calculate_effective_stats
+#from webInterface import get_pokemon_index, adjust_name,  BattleState, calculate_effective_stats
+import webInterface
 
 
 class OutcomeNode:
     def __init__(self, parent, probability, split_reason):
         # If root node
-        if isinstance(parent, BattleState):
+        if isinstance(parent, webInterface.BattleState):
             self.battleState = parent
             self.parent = None
             self.probability = probability
@@ -113,7 +112,7 @@ def decide_option(outcome, turn_depth, prediction_function, scalar):
         opponentLead = outcome.battleState.opponentTeam[outcome.battleState.opponentLeadIndex]
         switch_options = switches_to_consider(switch_options, opponentLead, opponentLead.possibleMoves)
         for option in switch_options:
-            optionTuple = (None, get_pokemon_index(outcome.battleState.myTeam, option.name))
+            optionTuple = (None, webInterface.get_pokemon_index(outcome.battleState.myTeam, option.name))
             myPossibleOptions.append(optionTuple)
 
         # Find the best possible switch
@@ -146,7 +145,7 @@ def decide_option(outcome, turn_depth, prediction_function, scalar):
             outcome.set_score(1)
             return [outcome]
         for option in switch_options:
-            optionTuple = (None, get_pokemon_index(outcome.battleState.opponentTeam, option.name))
+            optionTuple = (None, webInterface.get_pokemon_index(outcome.battleState.opponentTeam, option.name))
             opponentPossibleOptions.append(optionTuple)
 
         # Find the best possible switch
@@ -174,7 +173,7 @@ def decide_option(outcome, turn_depth, prediction_function, scalar):
         # Get my possible switches
         possibleSwitchOptions = check_for_switch_options(outcome.battleState.myTeam, outcome.battleState.myLeadIndex)
         for option in possibleSwitchOptions:
-            optionTuple = (None, get_pokemon_index(outcome.battleState.myTeam, option.name))
+            optionTuple = (None, webInterface.get_pokemon_index(outcome.battleState.myTeam, option.name))
             myPossibleOptions.append(optionTuple)
         # Get my possible moves
         if myLead.isDynamaxed:
@@ -183,7 +182,7 @@ def decide_option(outcome, turn_depth, prediction_function, scalar):
                 myPossibleOptions.append(optionTuple)
         elif myLead.item in ['Choice Band', 'Choice Scarf', 'Choice Specs'] and \
                 myLead.lastUsedMove is not None:
-            optionTuple = (get_move(myLead.knownMoves, adjust_name(myLead.lastUsedMove)), None)
+            optionTuple = (get_move(myLead.knownMoves, webInterface.adjust_name(myLead.lastUsedMove)), None)
             myPossibleOptions.append(optionTuple)
         else:
             move_list = attacks_to_consider(outcome, myLead.knownMoves, myLead, opponentLead)
@@ -209,7 +208,7 @@ def decide_option(outcome, turn_depth, prediction_function, scalar):
                                                          outcome.battleState.opponentLeadIndex)
         for option in possibleSwitchOptions:
             if option.isRevealed:
-                optionTuple = (None, get_pokemon_index(outcome.battleState.opponentTeam, option.name))
+                optionTuple = (None, webInterface.get_pokemon_index(outcome.battleState.opponentTeam, option.name))
                 opponentPossibleOptions.append(optionTuple)
         # Get opponent possible moves
         if len(opponentLead.knownMoves) < 4:
@@ -222,7 +221,7 @@ def decide_option(outcome, turn_depth, prediction_function, scalar):
                 opponentPossibleOptions.append(optionTuple)
         elif opponentLead.item in ['Choice Band', 'Choice Scarf', 'Choice Specs'] and \
                 opponentLead.lastUsedMove is not None:
-            optionTuple = (get_move(opponentMoveList, adjust_name(opponentLead.lastUsedMove)), None)
+            optionTuple = (get_move(opponentMoveList, webInterface.adjust_name(opponentLead.lastUsedMove)), None)
             opponentPossibleOptions.append(optionTuple)
         else:
             opponentMoveList = attacks_to_consider(outcome, opponentMoveList, opponentLead, myLead)
@@ -267,8 +266,8 @@ def decide_option(outcome, turn_depth, prediction_function, scalar):
 
 # Returns a list of OutcomeNode objects. myOption and opponentOption can be either a move object or switch index (int).
 def simulate_turn(outcome, myPokemon, opponentPokemon, myOption, opponentOption, mySwitchIndex, opponentSwitchIndex):
-    calculate_effective_stats(myPokemon, outcome.battleState.myField, outcome.battleState)
-    calculate_effective_stats(opponentPokemon, outcome.battleState.opponentField, outcome.battleState)
+    webInterface.calculate_effective_stats(myPokemon, outcome.battleState.myField, outcome.battleState)
+    webInterface.calculate_effective_stats(opponentPokemon, outcome.battleState.opponentField, outcome.battleState)
 
     nodeList = outcome.get_non_end_children()
     for node in nodeList:
@@ -282,8 +281,8 @@ def simulate_turn(outcome, myPokemon, opponentPokemon, myOption, opponentOption,
 
         myLead = node.battleState.myTeam[node.battleState.myLeadIndex]
         opponentLead = node.battleState.opponentTeam[node.battleState.opponentLeadIndex]
-        calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
-        calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
+        webInterface.calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
+        webInterface.calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
         # Determine turn order
         # If both players switch, turn order is determined based on speed.
         if myOption is None and mySwitchIndex is not None and \
@@ -295,8 +294,8 @@ def simulate_turn(outcome, myPokemon, opponentPokemon, myOption, opponentOption,
                 myLead = newNode.battleState.myTeam[newNode.battleState.myLeadIndex]
                 opponentLead = newNode.battleState.myTeam[newNode.battleState.opponentLeadIndex]
                 simulate_switch(newNode, True, mySwitchIndex)
-                calculate_effective_stats(myLead, newNode.battleState.myField, newNode.battleState)
-                calculate_effective_stats(opponentLead, newNode.battleState.opponentField, newNode.battleState)
+                webInterface.calculate_effective_stats(myLead, newNode.battleState.myField, newNode.battleState)
+                webInterface.calculate_effective_stats(opponentLead, newNode.battleState.opponentField, newNode.battleState)
                 simulate_switch(newNode, False, opponentSwitchIndex)
 
                 # Opponent wins the speed tie
@@ -304,36 +303,36 @@ def simulate_turn(outcome, myPokemon, opponentPokemon, myOption, opponentOption,
                 myLead = newNode.battleState.myTeam[newNode.battleState.myLeadIndex]
                 opponentLead = newNode.battleState.myTeam[newNode.battleState.opponentLeadIndex]
                 simulate_switch(newNode, False, opponentSwitchIndex)
-                calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
-                calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
+                webInterface.calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
+                webInterface.calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
                 simulate_switch(newNode, True, mySwitchIndex)
             # If I'm faster
             elif myLead.effectiveStats['Spe'] > opponentPokemon.effectiveStats['Spe']:
                 simulate_switch(node, True, mySwitchIndex)
-                calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
-                calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
+                webInterface.calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
+                webInterface.calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
                 simulate_switch(node, False, opponentSwitchIndex)
             # Opponent is faster
             else:
                 simulate_switch(node, False, opponentSwitchIndex)
-                calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
-                calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
+                webInterface.calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
+                webInterface.calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
                 simulate_switch(node, True, mySwitchIndex)
         # If I switch and opponent attacks, I go first
         elif myOption is None and mySwitchIndex is not None and opponentOption is not None:
             simulate_switch(node, True, mySwitchIndex)
             myLead = node.battleState.myTeam[node.battleState.myLeadIndex]
             opponentLead = node.battleState.opponentTeam[node.battleState.opponentLeadIndex]
-            calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
-            calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
+            webInterface.calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
+            webInterface.calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
             use_move(node, opponentLead, myLead, opponentOption, False, opponentSwitchIndex)
         # If I attack and opponent switches, opponent goes first
         elif myOption is not None and opponentOption is None and opponentSwitchIndex is not None:
             simulate_switch(node, False, opponentSwitchIndex)
             myLead = node.battleState.myTeam[node.battleState.myLeadIndex]
             opponentLead = node.battleState.opponentTeam[node.battleState.opponentLeadIndex]
-            calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
-            calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
+            webInterface.calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
+            webInterface.calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
             use_move(node, myLead, opponentLead, myOption, True, mySwitchIndex)
         # If both players attack, turn order is determined by move priority, and then speed.
         else:
@@ -350,8 +349,8 @@ def simulate_turn(outcome, myPokemon, opponentPokemon, myOption, opponentOption,
                     use_move(node, myLead, opponentLead, myOption, True, mySwitchIndex)
                     myLead = node.battleState.myTeam[node.battleState.myLeadIndex]
                     opponentLead = node.battleState.opponentTeam[node.battleState.opponentLeadIndex]
-                    calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
-                    calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
+                    webInterface.calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
+                    webInterface.calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
                     use_move(node, opponentLead, myLead, opponentOption, False, opponentSwitchIndex)
                 # If opponent is faster
                 elif (myLead.effectiveStats['Spe'] < opponentLead.effectiveStats['Spe'] and not
@@ -361,8 +360,8 @@ def simulate_turn(outcome, myPokemon, opponentPokemon, myOption, opponentOption,
                     use_move(node, opponentLead, myLead, opponentOption, False, opponentSwitchIndex)
                     myLead = node.battleState.myTeam[node.battleState.myLeadIndex]
                     opponentLead = node.battleState.opponentTeam[node.battleState.opponentLeadIndex]
-                    calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
-                    calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
+                    webInterface.calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
+                    webInterface.calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
                     use_move(node, myLead, opponentLead, myOption, True, mySwitchIndex)
                 # If speed tie
                 else:
@@ -373,8 +372,8 @@ def simulate_turn(outcome, myPokemon, opponentPokemon, myOption, opponentOption,
                     use_move(newNode, myLead, opponentLead, myOption, True, mySwitchIndex)
                     myLead = newNode.battleState.myTeam[newNode.battleState.myLeadIndex]
                     opponentLead = newNode.battleState.opponentTeam[newNode.battleState.opponentLeadIndex]
-                    calculate_effective_stats(myLead, newNode.battleState.myField, newNode.battleState)
-                    calculate_effective_stats(opponentLead, newNode.battleState.opponentField, newNode.battleState)
+                    webInterface.calculate_effective_stats(myLead, newNode.battleState.myField, newNode.battleState)
+                    webInterface.calculate_effective_stats(opponentLead, newNode.battleState.opponentField, newNode.battleState)
                     use_move(newNode, opponentLead, myLead, opponentOption, False, opponentSwitchIndex)
 
                     # Opponent wins the speed tie
@@ -384,22 +383,22 @@ def simulate_turn(outcome, myPokemon, opponentPokemon, myOption, opponentOption,
                     use_move(newNode, opponentLead, myLead, opponentOption, False, opponentSwitchIndex)
                     myLead = newNode.battleState.myTeam[newNode.battleState.myLeadIndex]
                     opponentLead = newNode.battleState.opponentTeam[newNode.battleState.opponentLeadIndex]
-                    calculate_effective_stats(myLead, newNode.battleState.myField, newNode.battleState)
-                    calculate_effective_stats(opponentLead, newNode.battleState.opponentField, newNode.battleState)
+                    webInterface.calculate_effective_stats(myLead, newNode.battleState.myField, newNode.battleState)
+                    webInterface.calculate_effective_stats(opponentLead, newNode.battleState.opponentField, newNode.battleState)
                     use_move(newNode, myLead, opponentLead, myOption, True, mySwitchIndex)
             elif myOption.priority > opponentOption.priority:
                 use_move(node, myLead, opponentLead, myOption, True, mySwitchIndex)
                 myLead = node.battleState.myTeam[node.battleState.myLeadIndex]
                 opponentLead = node.battleState.opponentTeam[node.battleState.opponentLeadIndex]
-                calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
-                calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
+                webInterface.calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
+                webInterface.calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
                 use_move(node, opponentLead, myLead, opponentOption, False, opponentSwitchIndex)
             else:
                 use_move(node, opponentLead, myLead, opponentOption, False, opponentSwitchIndex)
                 myLead = node.battleState.myTeam[node.battleState.myLeadIndex]
                 opponentLead = node.battleState.opponentTeam[node.battleState.opponentLeadIndex]
-                calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
-                calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
+                webInterface.calculate_effective_stats(myLead, node.battleState.myField, node.battleState)
+                webInterface.calculate_effective_stats(opponentLead, node.battleState.opponentField, node.battleState)
                 use_move(node, myLead, opponentLead, myOption, True, mySwitchIndex)
 
     # End of turn procedures
@@ -407,9 +406,9 @@ def simulate_turn(outcome, myPokemon, opponentPokemon, myOption, opponentOption,
     for node in nodeList:
         node.battleState.end_turn_procedure()
 
-        myLead = node.battleState.myTeam[get_pokemon_index(node.battleState.myTeam, myPokemon.name)]
+        myLead = node.battleState.myTeam[webInterface.get_pokemon_index(node.battleState.myTeam, myPokemon.name)]
         opponentLead = node.battleState.opponentTeam[
-            get_pokemon_index(node.battleState.opponentTeam, opponentPokemon.name)]
+            webInterface.get_pokemon_index(node.battleState.opponentTeam, opponentPokemon.name)]
         # Set lastUsed move
         if myOption is not None:
             myLead.lastUsedMove = myOption.name
@@ -560,11 +559,11 @@ def use_move(outcome, attacker, defender, move, isMyAttack, attackSwitchIndex):
             newNode.freeze_node()
             if move.name == 'high-jump-kick':
                 if isMyAttack:
-                    attackerIndex = get_pokemon_index(newNode.battleState.myTeam, attacker.name)
+                    attackerIndex = webInterface.get_pokemon_index(newNode.battleState.myTeam, attacker.name)
                     myAttacker = newNode.battleState.myTeam[attackerIndex]
                     myAttacker.take_damage(myAttacker.effectiveStats['HP'] / 2)
                 else:
-                    attackerIndex = get_pokemon_index(newNode.battleState.opponentTeam, attacker.name)
+                    attackerIndex = webInterface.get_pokemon_index(newNode.battleState.opponentTeam, attacker.name)
                     theirAttacker = newNode.battleState.opponentTeam[attackerIndex]
                     theirAttacker.take_damage(theirAttacker.effectiveStats['HP'] / 2)
             OutcomeNode(node, move.accuracy * .01, attacker.name + ' hit their attack')
@@ -616,10 +615,10 @@ def use_move(outcome, attacker, defender, move, isMyAttack, attackSwitchIndex):
                     newNode = OutcomeNode(node, .5, attacker.name + ' protected')
                     if isMyAttack:
                         attackerPokemon = newNode.battleState.myTeam[
-                            get_pokemon_index(newNode.battleState.myTeam, attacker.name)]
+                            webInterface.get_pokemon_index(newNode.battleState.myTeam, attacker.name)]
                     else:
                         attackerPokemon = newNode.battleState.opponentTeam[
-                            get_pokemon_index(newNode.battleState.opponentTeam, attacker.name)]
+                            webInterface.get_pokemon_index(newNode.battleState.opponentTeam, attacker.name)]
                 attackerPokemon.isProtected = True
             elif move.name == 'taunt':
                 defender.add_volatile_condition('Taunt')
@@ -775,8 +774,8 @@ def use_move(outcome, attacker, defender, move, isMyAttack, attackSwitchIndex):
             if isMyAttack:
                 damage = calculate_damage(attacker, defender, move, False, newNode.battleState.opponentField,
                                           newNode.battleState)
-                defenderIndex = get_pokemon_index(newNode.battleState.opponentTeam, defender.name)
-                attackerIndex = get_pokemon_index(newNode.battleState.myTeam, attacker.name)
+                defenderIndex = webInterface.get_pokemon_index(newNode.battleState.opponentTeam, defender.name)
+                attackerIndex = webInterface.get_pokemon_index(newNode.battleState.myTeam, attacker.name)
                 newNode.battleState.opponentTeam[defenderIndex].take_damage(damage)
                 if move.meta.drain > 0:
                     newNode.battleState.myTeam[attackerIndex].heal(damage * move.meta.drain * .01)
@@ -789,8 +788,8 @@ def use_move(outcome, attacker, defender, move, isMyAttack, attackSwitchIndex):
             else:
                 damage = calculate_damage(attacker, defender, move, False, newNode.battleState.myField,
                                           newNode.battleState)
-                defenderIndex = get_pokemon_index(newNode.battleState.myTeam, defender.name)
-                attackerIndex = get_pokemon_index(newNode.battleState.opponentTeam, attacker.name)
+                defenderIndex = webInterface.get_pokemon_index(newNode.battleState.myTeam, defender.name)
+                attackerIndex = webInterface.get_pokemon_index(newNode.battleState.opponentTeam, attacker.name)
                 newNode.battleState.myTeam[defenderIndex].take_damage(damage)
                 if move.meta.drain > 0:
                     newNode.battleState.opponentTeam[attackerIndex].heal(damage * move.meta.drain * .01)
@@ -809,14 +808,14 @@ def use_move(outcome, attacker, defender, move, isMyAttack, attackSwitchIndex):
             newNode = OutcomeNode(node, move.meta.ailment_chance * .01,
                                   attacker.name + "'s " + move.name + ' inflicted status')
             if isMyAttack:
-                defenderIndex = get_pokemon_index(newNode.battleState.opponentTeam, defender.name)
+                defenderIndex = webInterface.get_pokemon_index(newNode.battleState.opponentTeam, defender.name)
                 if move.meta.ailment.name in statusAbbreviation:
                     newNode.battleState.opponentTeam[defenderIndex]\
                         .set_status_condition(statusAbbreviation[move.meta.ailment.name])
                 else:
                     newNode.battleState.opponentTeam[defenderIndex].add_volatile_condition(move.meta.ailment.name)
             else:
-                defenderIndex = get_pokemon_index(newNode.battleState.myTeam, defender.name)
+                defenderIndex = webInterface.get_pokemon_index(newNode.battleState.myTeam, defender.name)
                 if move.meta.ailment.name in statusAbbreviation:
                     newNode.battleState.myTeam[defenderIndex] \
                         .set_status_condition(statusAbbreviation[move.meta.ailment.name])
@@ -834,12 +833,12 @@ def use_move(outcome, attacker, defender, move, isMyAttack, attackSwitchIndex):
             newNode = OutcomeNode(node, move.meta.flinch_chance * .01,
                                   move.name + ' caused ' + defender.name + ' to flinch')
             if isMyAttack:
-                defenderIndex = get_pokemon_index(newNode.battleState.opponentTeam, defender.name)
+                defenderIndex = webInterface.get_pokemon_index(newNode.battleState.opponentTeam, defender.name)
                 if newNode.battleState.opponentTeam[defenderIndex].substituteHP == 0 and \
                         'Inner Focus' not in defender.ability:
                     newNode.battleState.opponentTeam[defenderIndex].flinched = True
             else:
-                defenderIndex = get_pokemon_index(newNode.battleState.myTeam, defender.name)
+                defenderIndex = webInterface.get_pokemon_index(newNode.battleState.myTeam, defender.name)
                 if newNode.battleState.myTeam[defenderIndex].substituteHP == 0 and \
                         'Inner Focus' not in defender.ability:
                     newNode.battleState.myTeam[defenderIndex].flinched = True
@@ -856,16 +855,16 @@ def use_move(outcome, attacker, defender, move, isMyAttack, attackSwitchIndex):
                                   attacker.name + "'s " + move.name + ' caused a stat change')
             if move.meta.category.name == 'damage+raise':
                 if isMyAttack:
-                    target = newNode.battleState.myTeam[get_pokemon_index(newNode.battleState.myTeam, attacker.name)]
+                    target = newNode.battleState.myTeam[webInterface.get_pokemon_index(newNode.battleState.myTeam, attacker.name)]
                 else:
-                    target = newNode.battleState.opponentTeam[get_pokemon_index(
+                    target = newNode.battleState.opponentTeam[webInterface.get_pokemon_index(
                         newNode.battleState.opponentTeam, attacker.name)]
             else:
                 if isMyAttack:
-                    target = newNode.battleState.opponentTeam[get_pokemon_index(
+                    target = newNode.battleState.opponentTeam[webInterface.get_pokemon_index(
                         newNode.battleState.opponentTeam, defender.name)]
                 else:
-                    target = newNode.battleState.myTeam[get_pokemon_index(newNode.battleState.myTeam, defender.name)]
+                    target = newNode.battleState.myTeam[webInterface.get_pokemon_index(newNode.battleState.myTeam, defender.name)]
             for stat in move.stat_changes:
                 target.boost_stat(statAbbreviation[stat.stat.name], stat.change)
 
@@ -1333,9 +1332,9 @@ def calculate_confusion_damage(pokemon):
 # Returns pokemon from either team by using their name
 def find_pokemon(battleState, name, isMyPokemon):
     if isMyPokemon:
-        return battleState.myTeam[get_pokemon_index(battleState.myTeam, name)]
+        return battleState.myTeam[webInterface.get_pokemon_index(battleState.myTeam, name)]
     else:
-        return battleState.opponentTeam[get_pokemon_index(battleState.opponentTeam, name)]
+        return battleState.opponentTeam[webInterface.get_pokemon_index(battleState.opponentTeam, name)]
 
 
 def get_move(move_list, move_name):

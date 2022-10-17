@@ -1,5 +1,4 @@
 import logging
-
 from selenium.webdriver.common.by import By
 import os
 from dotenv import load_dotenv
@@ -7,6 +6,7 @@ from selenium.webdriver.common.keys import Keys
 import time
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.select import Select
+import requests
 
 
 def awaitElement(driver, searchType, element):
@@ -63,7 +63,6 @@ def login(driver):
         return True
     else:
         return False
-
 
 
 def uploadTeam(driver, teamName, format):
@@ -259,3 +258,20 @@ def disable_animations(driver):
     animations = driver.find_element(By.NAME, 'noanim')
     animations.click()
     time.sleep(.5)
+
+
+# Returns json file with possible random sets.
+def updatePossibleSets():
+    logging.info('Getting possible random battle sets json file.')
+    try:
+        url = requests.get('https://pkmn.github.io/randbats/data/gen8randombattle.json')
+        sets = url.text
+    except:
+        logging.warning('Error grabbing online set data. Using old data.')
+        with open('teams/old_sets.json', 'r') as setsFile:
+            sets = setsFile.read()
+            return sets
+    localFile = open('teams/old_sets.json', 'w')
+    localFile.write(sets)
+    localFile.close()
+    return sets

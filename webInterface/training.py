@@ -6,8 +6,8 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium import webdriver
-from webFunctions import awaitElement
-from infoScraping import getToolTip
+from webInterface import awaitElement
+from webInterface import getToolTip
 import pandas as pd
 
 while True:
