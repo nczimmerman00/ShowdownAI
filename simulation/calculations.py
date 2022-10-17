@@ -99,7 +99,7 @@ class OutcomeNode:
 
 
 # Takes an outcome object, and returns the best perceived possible outcome for the current turn
-def decide_option(outcome, turn_depth, model, scalar):
+def decide_option(outcome, turn_depth, prediction_function, scalar):
     myPossibleOptions = []
     opponentPossibleOptions = []
     # Check if myself or opponent needs to switch in and look at possible switch options
@@ -122,9 +122,9 @@ def decide_option(outcome, turn_depth, model, scalar):
             newNode = OutcomeNode(outcome, 1, 'My forced switch. Index: ' + str(myOption[1]))
             newNode.set_my_selected_option(myOption)
             simulate_switch(newNode, True, myOption[1])
-            possibleOutcomes.append(decide_option(newNode, turn_depth - 1, model, scalar)[0])
+            possibleOutcomes.append(decide_option(newNode, turn_depth - 1, prediction_function, scalar)[0])
         for possibleOutcome in possibleOutcomes:
-            calculate_score(possibleOutcome, model, scalar)
+            calculate_score(possibleOutcome, prediction_function, scalar)
         mySelectedOutcome = get_best_case(possibleOutcomes)
         # Remove the other options from the children list
         mySelectedOutcome.parent.children = [mySelectedOutcome]
@@ -155,9 +155,9 @@ def decide_option(outcome, turn_depth, model, scalar):
             newNode = OutcomeNode(outcome, 1, 'Opponent forced switch. Index: ' + str(opponentOption[1]))
             newNode.set_oppponent_selected_option(opponentOption)
             simulate_switch(newNode, False, opponentOption[1])
-            possibleOutcomes.append(decide_option(newNode, turn_depth - 1, model, scalar)[-1])
+            possibleOutcomes.append(decide_option(newNode, turn_depth, prediction_function, scalar)[-1])
         for possibleOutcome in possibleOutcomes:
-            calculate_score(possibleOutcome, model, scalar)
+            calculate_score(possibleOutcome, prediction_function, scalar)
         opponentSelectedOutcome = get_worst_case(possibleOutcomes)
         opponentSelectedOutcome.parent.children = [opponentSelectedOutcome]
         return [opponentSelectedOutcome]
@@ -250,10 +250,10 @@ def decide_option(outcome, turn_depth, model, scalar):
                                      myOption[0], opponentOption[0], myOption[1], opponentOption[1])
             possibleOutcomes = []
             for possibleOutcome in nodeList:
-                possibleOutcomes.append(decide_option(possibleOutcome, turn_depth - 1, model, scalar)[0])
+                possibleOutcomes.append(decide_option(possibleOutcome, turn_depth - 1, prediction_function, scalar)[0])
             # Calculate Outcome Scores
             for possibleOutcome in possibleOutcomes:
-                calculate_score(possibleOutcome, model, scalar)
+                calculate_score(possibleOutcome, prediction_function, scalar)
             # Get average score for possible outcomes
             opponentChoice.set_score(get_average_score(possibleOutcomes))
             oppOptionOutcomes.append(opponentChoice)
@@ -1053,6 +1053,9 @@ def calculate_damage(attacker, defender, attack, isCrit, defenderField, battleSt
             return 0
         return attacker.lastDamageTaken * 2
 
+    if attack.name == 'pyro-ball':
+        attack.type = attack.type[0]
+
     # Items that block damage
     if 'Air Balloon' in defender.item and attack.type.name == 'ground':
         return 0
@@ -1143,7 +1146,7 @@ def calculate_damage(attacker, defender, attack, isCrit, defenderField, battleSt
             attack.type.name = 'water'
             power = 120
     elif attack.name == 'hex':
-        if defender.status is not None:
+        if defender.statusCondition is not None:
             power = 130
         else:
             power = 65
@@ -1191,8 +1194,8 @@ def calculate_damage(attacker, defender, attack, isCrit, defenderField, battleSt
                 stab = 1.5
         else:
             stab = 1
-    except:
-        if attack.type[0].name in attacker.type:
+    except AttributeError:
+        if attack.type[0] in attacker.type:
             if 'Adaptability' in attacker.ability:
                 stab = 2
             else:
@@ -1351,7 +1354,7 @@ def get_average_score(outcome_list):
 
 
 # Sets the given outcome's score from the AI model
-def calculate_score(outcome, model, scalar):
+def calculate_score(outcome, prediction_function, scalar):
     myLead = outcome.battleState.myTeam[outcome.battleState.myLeadIndex]
     opponentLead = outcome.battleState.opponentTeam[outcome.battleState.opponentLeadIndex]
     battleState = outcome.battleState
@@ -1513,8 +1516,8 @@ def calculate_score(outcome, model, scalar):
     #arr = min_max_scaler.fit_transform(arr)
     arr = scalar.transform(arr)
     arr = np.asarray(arr.astype('float32'))
-    prediction = model.predict(arr)
-    outcome.set_score(prediction[0][0])
+    prediction = prediction_function(arr.reshape(1, -1))
+    outcome.set_score(prediction[0][-1])
 
 
 # Takes a list of outcomes. Returns the outcome with the lowest score
@@ -1797,7 +1800,10 @@ def switches_to_consider(team, opposing_lead, opposing_move_list):
         for move in opposing_move_list:
             type_effectiveness = 1
             for defender_type in member.type:
-                type_effectiveness *= typeChart[move.type.name][defender_type]
+                try:
+                    type_effectiveness *= typeChart[move.type.name][defender_type]
+                except AttributeError:
+                    type_effectiveness *= typeChart[move.type[0].name][defender_type]
             if type_effectiveness < 1:
                 resistances += 1
             elif type_effectiveness > 1:

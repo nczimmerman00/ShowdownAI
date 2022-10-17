@@ -1,7 +1,7 @@
 import logging
 import random
 import time
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 from selenium.webdriver.common.by import By
 from infoScraping import adjust_name
 
@@ -89,6 +89,8 @@ def startTimer(driver):
         timerStart.click()
     except NoSuchElementException:
         pass
+    except ElementClickInterceptedException:
+        pass
     return True
 
 
@@ -112,11 +114,6 @@ def awaitTurn(driver):
                     time.sleep(5)
                     continue
             except NoSuchElementException:
-                if timer_counter > 23 and (not timer_started):
-                    startTimer(driver)
-                    timer_started = True
-                timer_counter += 1
-                time.sleep(5)
                 continue
 
 
@@ -155,7 +152,10 @@ def check_for_forced_switch(driver):
 
 # Returns True if successful, returns False otherwise
 def select_option(driver, outcome):
-    if not outcome.mySelectedOption:
+    if not outcome:
+        logging.critical('No outcome given!')
+        return False
+    if outcome.mySelectedOption is None:
         logging.warning('None found on mySelectedOption')
         return False
 
@@ -168,7 +168,7 @@ def select_option(driver, outcome):
         logging.info('Attempting to use move ' + outcome.mySelectedOption[0].name + ' with ' +
                      outcome.battleState.myTeam[outcome.battleState.myLeadIndex].name)
         option = outcome.mySelectedOption[0]
-        if 'max-' in option.name:
+        if 'max-' in option.name and option.name is not 'dynamax-cannon':
             try:
                 dynamax_box = driver.find_element(By.NAME, 'dynamax').click()
                 time.sleep(.5)
@@ -227,43 +227,76 @@ def select_option(driver, outcome):
 
 # Selects random move in case of error. Returns True if successful, False otherwise
 def random_select(driver):
-    possible_options = []
-    # Get attack buttons
+    attack_options = 0
+    switch_options = 0
+    awaitTurn(driver)
+    # Get number of attack buttons
     try:
         elementGrab = driver.find_element(By.CLASS_NAME, 'movebuttons-nomax')
         buttons = elementGrab.find_elements(By.TAG_NAME, 'button')
-        possible_options += buttons
+        attack_options += len(buttons)
     except NoSuchElementException:
         try:
             elementGrab = driver.find_element(By.CLASS_NAME, 'movemenu')
             buttons = elementGrab.find_elements(By.TAG_NAME, 'button')
-            possible_options += buttons
+            attack_options += len(buttons)
         except NoSuchElementException:
             pass
 
-    # Get switch buttons
+    # Get number of switch buttons
     menu = driver.find_element(By.CLASS_NAME, 'switchmenu')
     try:
-        buttons = menu.find_elements(By.CLASS_NAME, 'chooseSwitch')
-        possible_options += buttons
+        buttons = menu.find_elements(By.NAME, 'chooseSwitch')
+        switch_options += len(buttons)
     except NoSuchElementException:
         pass
 
     # Get turn number
     turn = driver.find_element(By.CLASS_NAME, 'turn').text
 
+    possible_options = []
+    for i in range(attack_options):
+        possible_options.append(i)
+    for i in range(switch_options):
+        possible_options.append(i + 4)
+    random.shuffle(possible_options)
+
     while possible_options:
         random_number = random.randrange(0, len(possible_options), 1)
-        try:
-            possible_options[random_number].click()
-            time.sleep(1)
-            # Check if button press worked
-            result = check_if_option_was_selected(driver, turn)
-            if result:
-                return True
-        except:
-            pass
-        del possible_options[random_number]
+        random_number = possible_options[random_number]
+        # If the random option is an attack
+        if random_number < 4:
+            try:
+                elementGrab = driver.find_element(By.CLASS_NAME, 'movebuttons-nomax')
+                buttons = elementGrab.find_elements(By.TAG_NAME, 'button')
+                buttons[random_number].click()
+            except NoSuchElementException:
+                try:
+                    elementGrab = driver.find_element(By.CLASS_NAME, 'movemenu')
+                    buttons = elementGrab.find_elements(By.TAG_NAME, 'button')
+                    buttons[random_number].click()
+                except NoSuchElementException:
+                    pass
+                except ElementClickInterceptedException:
+                    pass
+            except ElementClickInterceptedException:
+                pass
+        # If the random option is a switch
+        else:
+            try:
+                menu = driver.find_element(By.CLASS_NAME, 'switchmenu')
+                buttons = menu.find_elements(By.NAME, 'chooseSwitch')
+                buttons[random_number - 4].click()
+            except NoSuchElementException:
+                pass
+            except ElementClickInterceptedException:
+                pass
+        possible_options.remove(random_number)
+        # Check if button press worked
+        time.sleep(1)
+        result = check_if_option_was_selected(driver, turn)
+        if result:
+            return True
     return False
 
 
@@ -295,7 +328,8 @@ def surrender(driver):
     close_button.click()
     time.sleep(.5)
     form = driver.find_element(By.TAG_NAME, 'form')
-    buttons = form.find_element(By.TAG_NAME, 'button')
+    time.sleep(.5)
+    buttons = form.find_elements(By.TAG_NAME, 'button')
     for button in buttons:
         if button.get_attribute("type") == 'submit':
             button.click()

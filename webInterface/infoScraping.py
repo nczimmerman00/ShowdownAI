@@ -1,7 +1,6 @@
 import json
 import logging
 import math
-import os
 import re
 import time
 import asyncio
@@ -815,7 +814,10 @@ async def getBattleState(driver, previousBattleState, elo):
         # Get name
         if nicknamed:
             elementGrab = toolTip.find_element(By.TAG_NAME, 'h2').find_elements(By.TAG_NAME, 'small')
-            tempName = elementGrab[0].text[1:-1]
+            if re.search('[L][0-9][0-9]', elementGrab[0].text):
+                tempName = elementGrab[1].text[1:-1]
+            else:
+                tempName = elementGrab[0].text[1:-1]
         else:
             try:
                 elementGrab = toolTip.find_element(By.TAG_NAME, 'h2').find_element(By.TAG_NAME, 'small').text
@@ -891,7 +893,10 @@ async def getBattleState(driver, previousBattleState, elo):
                 nicknamed = True
         if nicknamed:
             elementGrab = toolTip.find_element(By.TAG_NAME, 'h2').find_elements(By.TAG_NAME, 'small')
-            hoverName = elementGrab[0].text[1:-1]
+            if re.search('[L][0-9][0-9]', elementGrab[0].text):
+                hoverName = elementGrab[1].text[1:-1]
+            else:
+                hoverName = elementGrab[0].text[1:-1]
         else:
             try:
                 elementGrab = toolTip.find_element(By.TAG_NAME, 'h2').find_element(By.TAG_NAME, 'small').text
@@ -947,7 +952,10 @@ async def getBattleState(driver, previousBattleState, elo):
                         nicknamed = True
                 if nicknamed:
                     elementGrab = toolTip.find_element(By.TAG_NAME, 'h2').find_elements(By.TAG_NAME, 'small')
-                    hoverName = elementGrab[0].text[1:-1]
+                    if re.search('[L][0-9][0-9]', elementGrab[0].text):
+                        hoverName = elementGrab[1].text[1:-1]
+                    else:
+                        hoverName = elementGrab[0].text[1:-1]
                 else:
                     try:
                         elementGrab = toolTip.find_element(By.TAG_NAME, 'h2').find_element(By.TAG_NAME, 'small').text
@@ -1016,7 +1024,10 @@ async def getBattleState(driver, previousBattleState, elo):
                 # Find Name
                 if nicknamed:
                     elementGrab = toolTip.find_element(By.TAG_NAME, 'h2').find_elements(By.TAG_NAME, 'small')
-                    tempName = elementGrab[0].text[1:-1]
+                    if re.search('[L][0-9][0-9]', elementGrab[0].text):
+                        tempName = elementGrab[1].text[1:-1]
+                    else:
+                        tempName = elementGrab[0].text[1:-1]
                 else:
                     try:
                         elementGrab = toolTip.find_element(By.TAG_NAME, 'h2').find_element(By.TAG_NAME, 'small').text
@@ -1061,7 +1072,10 @@ async def getBattleState(driver, previousBattleState, elo):
                     revealedMoveList = rawMoveText.split('\n')
                     for i in range(len(revealedMoveList)):
                         if revealedMoveList[i][:3] != "Max":
-                            revealedMoveList[i] = revealedMoveList[i][2:(revealedMoveList[i].index('(') - 1)]
+                            try:
+                                revealedMoveList[i] = revealedMoveList[i][2:(revealedMoveList[i].index('(') - 1)]
+                            except ValueError:
+                                pass
                 except NoSuchElementException:
                     movesRevealed = False
                 if movesRevealed:
@@ -1112,7 +1126,7 @@ async def getBattleState(driver, previousBattleState, elo):
     # Reset in battle for opponent's team
     for member in battleState.opponentTeam:
         member.inBattle = False
-    # Find current opponent pokemon's index
+    # Find opponent's current pokemon's index
     elementGrab = driver.find_element(By.CLASS_NAME, 'tooltips')
     elementGrab = elementGrab.find_elements(By.CSS_SELECTOR, '*')
     hover.move_to_element(elementGrab[2]).perform()
@@ -1125,13 +1139,18 @@ async def getBattleState(driver, previousBattleState, elo):
                 nicknamed = True
         if nicknamed:
             elementGrab = toolTip.find_element(By.TAG_NAME, 'h2').find_elements(By.TAG_NAME, 'small')
-            hoverName = elementGrab[0].text[1:-1]
+            if re.search('[L][0-9][0-9]', elementGrab[0].text):
+                hoverName = elementGrab[1].text[1:-1]
+            else:
+                hoverName = elementGrab[0].text[1:-1]
         else:
             try:
                 elementGrab = toolTip.find_element(By.TAG_NAME, 'h2').find_element(By.TAG_NAME, 'small').text
                 hoverName = toolTip.find_element(By.TAG_NAME, 'h2').text.replace(elementGrab, '').strip()
             except NoSuchElementException:
                 hoverName = toolTip.find_element(By.TAG_NAME, 'h2').text
+        if hoverName == '8':
+            hoverName = 'Wishiwashi'
 
         # Get opponent's lead pokemon
         teamIndex = get_pokemon_index(battleState.opponentTeam, hoverName)
@@ -1349,7 +1368,10 @@ def getFieldConditions(field, conditionText, opponentName):
             field['auroraVeil']['isUp'] = True
             field['auroraVeil']['minTurns'] = int(text[text.index('(') + 1])
             if re.search('or', text):
-                field['auroraVeil']['maxTurns'] = int(text[text.index(')') - 7])
+                try:
+                    field['auroraVeil']['maxTurns'] = int(text[text.index(')') - 7])
+                except ValueError:
+                    field['auroraVeil']['maxTurns'] = field['auroraVeil']['minTurns']
             else:
                 field['auroraVeil']['maxTurns'] = field['auroraVeil']['minTurns']
         elif re.search('Tailwind', text):
@@ -1403,10 +1425,24 @@ def getVolatileConditions(pokemon, elementList):
 
 # Gets the index for a pokemon in a team object.
 def get_pokemon_index(team, pokemonName):
+    multiforms = {
+        'Wishiwashi-School': 'Wishiwashi',
+        'Aegislash-Blade': 'Aegislash',
+        'Basculin-Blue-Striped': 'Basculin',
+        'Mimikyu-Busted': 'Mimikyu',
+        'Morpeko-Hangry': 'Morpeko',
+        'Eiscue-Noice': 'Eiscue'
+    }
+    if 'Zygarde' in pokemonName:
+        for index, pokemon in enumerate(team):
+            if pokemon.name in ['Zygarde-10', 'Zygarde']:
+                return index
+    if pokemonName in multiforms:
+        pokemonName = multiforms[pokemonName]
     for index, pokemon in enumerate(team):
         if pokemon.name == pokemonName:
             return index
-    logging.warning('Hover name: ' + pokemonName)
+    logging.warning('Pokemon not found in team. Hover name: ' + pokemonName)
     raise NoSuchElementException
 
 
@@ -1444,6 +1480,16 @@ async def async_pokeapi_request(session, pokemon, previousPokemon):
 
     returnPokemon = pokemon
     logging.info("Performing api lookup for " + pokemon.name)
+    multiforms = {
+        'Wishiwashi-School': 'Wishiwashi',
+        'Aegislash-Blade': 'Aegislash',
+        'Basculin-Blue-Striped': 'Basculin',
+        'Mimikyu-Busted': 'Mimikyu',
+        'Morpeko-Hangry': 'Morpeko',
+        'Eiscue-Noice': 'Eiscue'
+    }
+    if pokemon.name in multiforms:
+        pokemon.name = multiforms[pokemon.name]
 
     # Check for different ev's/ivs
     attackAdjusted = False
@@ -1455,11 +1501,13 @@ async def async_pokeapi_request(session, pokemon, previousPokemon):
     if pokemon.name not in allSets:
         if pokemon.name == 'Wishiwashi':
             jsonPokemonName = 'Wishiwashi-School'
-        if pokemon.name == 'Changed forme: Wishiwashi-School':
+        elif pokemon.name == 'Changed forme: Wishiwashi-School':
             jsonPokemonName = 'Wishiwashi-School'
             pokemon.name = 'Wishiwashi'
         elif 'Pikachu' in jsonPokemonName:
             jsonPokemonName = 'Pikachu'
+        elif pokemon.name == 'Gastrodon-East':
+            jsonPokemonName = 'Gastrodon'
         else:
             logging.info('Pokemon not found. Adding -Gmax to name')
             jsonPokemonName = pokemon.name + '-Gmax'
@@ -1507,7 +1555,10 @@ async def async_pokeapi_request(session, pokemon, previousPokemon):
 
     # If Silvally, get type
     if re.search(r"Silvally", returnPokemon.name):
-        returnPokemon.type.append(returnPokemon.name[returnPokemon.name.index('-') + 1:].lower())
+        try:
+            returnPokemon.type.append(returnPokemon.name[returnPokemon.name.index('-') + 1:].lower())
+        except ValueError:
+            returnPokemon.type.append('normal')
     # Grab Type
     else:
         for typeIndex in pokemonRequest.types:
@@ -1563,9 +1614,11 @@ def adjust_name(entry):
         'Darmanitan-Galar': 'darmanitan-galar-standard',
         'Darmanitan-Galar-Zen': 'darmanitan-galar-zen',
         'Eiscue': 'eiscue-ice',
+        'Eiscue-Noice': 'eiscue-ice',
         'Gastrodon-East': 'gastrodon',
         'Genesect-Douse': 'genesect',
         'Giratina': 'giratina-altered',
+        'Gourgeist': "gourgeist-average",
         'Indeedee': 'indeedee-male',
         'Indeedee-F': 'indeedee-female',
         'Keldeo': 'keldeo-ordinary',

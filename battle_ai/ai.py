@@ -6,6 +6,9 @@ from keras import Sequential, callbacks
 from keras.layers import Dense
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
+from sklearn.metrics import accuracy_score
 from pickle import dump
 
 
@@ -43,6 +46,9 @@ def append_terrain_column(df, column_name):
         if column_check not in df:
             df[column_check] = 0
 
+
+if not os.path.isdir('models/'):
+    os.mkdir('models')
 
 ### This code properly formats the data to be fed to the AI model ###
 
@@ -88,8 +94,6 @@ append_weather_column(df, 'Weather')
 
 # Sort the array
 df = df.sort_index(axis=1)
-for column in df.columns:
-    print(column)
 # Grab dataset
 df = df.to_numpy()
 x = df[:, :-1]
@@ -104,12 +108,43 @@ earlystopping = callbacks.EarlyStopping(monitor ="val_loss",
                                         mode ="min", patience = 5,
                                         restore_best_weights = True)
 
-model = Sequential()
-model.add(Dense(12, input_shape=(157,), activation='relu'))
-model.add(Dense(80, activation='relu'))
-model.add(Dense(1, activation='sigmoid'))
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[keras.metrics.BinaryAccuracy()])
-model.fit(x_train, y_train, epochs=50, batch_size=10, validation_data=(x_test, y_test), callbacks=[earlystopping])
-_, accuracy = model.evaluate(x, y)
-model.save('models/model1.h5')
-print('Accuracy: ' + str(accuracy*100) + '%')
+model1 = Sequential()
+model1.add(Dense(64, input_shape=(157,), activation='relu'))
+model1.add(Dense(32, activation='relu'))
+model1.add(Dense(1, activation='sigmoid'))
+model1.compile(loss='binary_crossentropy', optimizer='adam', metrics=[keras.metrics.BinaryAccuracy()])
+model1.fit(x_train, y_train, epochs=50, batch_size=10, validation_data=(x_test, y_test), callbacks=[earlystopping])
+_, accuracy = model1.evaluate(x, y)
+model1.save('models/model1.h5')
+print('Model 1 Accuracy: ' + str(accuracy*100) + '%')
+
+model2 = Sequential()
+model2.add(Dense(64, input_shape=(157,), activation='relu'))
+model2.add(Dense(48, activation='relu'))
+model2.add(Dense(32, activation='relu'))
+model2.add(Dense(1, activation='sigmoid'))
+model1.compile(loss='binary_crossentropy', optimizer='adam', metrics=[keras.metrics.BinaryAccuracy()])
+model1.fit(x_train, y_train, epochs=50, batch_size=10, validation_data=(x_test, y_test), callbacks=[earlystopping])
+_, accuracy = model1.evaluate(x, y)
+model1.save('models/model2.h5')
+print('Model 2 Accuracy: ' + str(accuracy*100) + '%')
+
+
+model3 = LogisticRegression()
+model3.fit(x_train, y_train)
+predictions = model3.predict(x_test)
+accuracy = accuracy_score(predictions, y_test)
+print('Model 3 Accuracy: ' + str(accuracy))
+pkl_filename = "models/model3.pkl"
+with open(pkl_filename, 'wb') as file:
+    dump(model3, file)
+
+model4 = GaussianNB()
+model4.fit(x_train, y_train)
+predictions = model4.predict(x_test)
+accuracy = accuracy_score(predictions, y_test)
+print('Model 4 Accuracy: ' + str(accuracy))
+test = model4.predict_proba(x_test[2].reshape(1, -1))
+pkl_filename = 'models/model4.pkl'
+with open(pkl_filename, 'wb') as file:
+    dump(model4, file)

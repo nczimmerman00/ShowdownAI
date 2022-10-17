@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import pickle
 import time
 import battleControls
 import webFunctions
@@ -16,7 +17,7 @@ from statistics import save_results
 
 
 TURN_DEPTH = 1
-MODEL_NAME = 'model1'
+MODEL_NAME = 'model4'
 MODE = 'LADDER'     # Set to 'LADDER' or 'CHALLENGE'
 
 
@@ -24,8 +25,14 @@ async def main():
     with open('log.txt', 'w'):
         pass
     logging.basicConfig(filename='log.txt', encoding='utf-8', level=logging.INFO)
-    path = os.path.dirname(__file__) + '/battle_ai/models/' + MODEL_NAME + '.h5'
-    model = keras.models.load_model(path)
+    if MODEL_NAME in ['model1', 'model2']:
+        path = os.path.dirname(__file__) + '/battle_ai/models/' + MODEL_NAME + '.h5'
+        model = keras.models.load_model(path)
+        prediction_function = model.predict
+    else:
+        with open('battle_ai/models/' + MODEL_NAME + '.pkl', 'rb') as file:
+            model = pickle.load(file)
+            prediction_function = model.predict_proba
     scalar = load(open('battle_ai/models/scalar.pkl', 'rb'))
 
     chrome_options = webdriver.ChromeOptions()
@@ -64,7 +71,7 @@ async def main():
                 if battleControls.check_for_multi_turn_moves(driver):
                     continue
                 currentBattleState = await infoScraping.getBattleState(driver, currentBattleState, current_elo)
-                decision_list = decide_option(OutcomeNode(currentBattleState, 1, 'Root'), TURN_DEPTH, model, scalar)
+                decision_list = decide_option(OutcomeNode(currentBattleState, 1, 'Root'), TURN_DEPTH, prediction_function, scalar)
                 # Select best option from decision list. If False is returned, try next best option.
                 option_selected = False
                 for i in range(len(decision_list)):
