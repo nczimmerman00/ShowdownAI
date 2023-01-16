@@ -171,9 +171,12 @@ def selectAvatar(driver):
 def enterQueue(driver):
     driver.find_element(By.CLASS_NAME, 'formatselect').click()
     time.sleep(.5)
+    # Select gen 8 random battles
+
     format_buttons = driver.find_elements(By.NAME, 'selectFormat')
-    format_buttons[0].click()
+    format_buttons[42].click()
     time.sleep(.5)
+    # Select Battle button
     buttons = driver.find_elements(By.CLASS_NAME, 'big')
     buttons[0].click()
 
